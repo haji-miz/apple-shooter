@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>シンプルシューティング</title>
+  <style>
+    canvas {
+      background: #000;
+      display: block;
+      margin: 0 auto;
+    }
+    #clearScreen {
+      text-align: center;
+      margin-top: 20px;
+      display: none;
+    }
+    #clearScreen img {
+      max-width: 100%;
+      height: auto;
+    }
+    #retryButton {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="400" height="600"></canvas>
+
+  <!-- クリア画面 -->
+  <div id="clearScreen">
+    <img id="clearImage" src="img/clear.png" alt="クリア画面" />
+    <br />
+    <button id="retryButton">もう一度遊ぶ</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    // 画像読み込み
+    const bgImg = new Image();
+    bgImg.src = 'img/background.jpg';
+
+    const playerImg = new Image();
+    playerImg.src = 'img/player.png';
+
+    const bulletImg = new Image();
+    bulletImg.src = 'img/bullet.png';
+
+    const enemyRedImg = new Image();
+    enemyRedImg.src = 'img/enemy_red.png';
+
+    const enemyBlueImg = new Image();
+    enemyBlueImg.src = 'img/enemy_blue.png';
+
+const enemyLemonImg = new Image();
+enemyLemonImg.src = 'img/enemy_lemon.png';
+
+const enemyMomoImg = new Image();
+enemyMomoImg.src = 'img/enemy_momo.png';
+
+const enemySenbeiImg = new Image();
+enemySenbeiImg.src = 'img/enemy_senbei.png';
+
+    const enemyStrawberryImg = new Image();
+    enemyStrawberryImg.src = 'img/enemy_strawberry.png';
+
+    let player = { x: 200, y: 550, width: 30, height: 30 };
+    let bullets = [];
+    let enemies = [];
+    let keys = {};
+    let score = 0;
+    let isGameOver = false;
+
+    document.addEventListener('keydown', (e) => keys[e.code] = true);
+    document.addEventListener('keyup', (e) => keys[e.code] = false);
+
+ function spawnEnemy() {
+  if (isGameOver) return;
+
+  let x = Math.random() * (canvas.width - 30);
+  let rand = Math.random();
+  let type, img, scoreValue;
+
+  if (rand < 0.5) {
+    type = 'red';
+    img = enemyRedImg;
+    scoreValue = 1;
+  } else if (rand < 0.75) {
+    type = 'blue';
+    img = enemyBlueImg;
+    scoreValue = 2;
+  } else if (rand < 0.85) {
+    type = 'lemon';
+    img = enemyLemonImg;
+    scoreValue = 3;
+  } else if (rand < 0.91) {
+    type = 'momo';
+    img = enemyMomoImg;
+    scoreValue = 3;
+  } else if (rand < 0.955) {
+    type = 'senbei';
+    img = enemySenbeiImg;
+    scoreValue = 5;
+  } else {
+    type = 'cake';
+    img = enemyStrawberryImg;
+    scoreValue = 10;
+  }
+
+  enemies.push({
+    x: x,
+    y: 0,
+    width: 30,
+    height: 30,
+    img: img,
+    score: scoreValue,
+    type: type
+  });
+}
+
+
+    function update() {
+      if (isGameOver) return;
+
+      // プレイヤー移動
+      if (keys['ArrowLeft']) player.x -= 5;
+      if (keys['ArrowRight']) player.x += 5;
+      player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
+
+      // 弾発射
+      if (keys['Space']) {
+        if (!player.cooldown) {
+          bullets.push({ x: player.x + player.width / 2 - 6, y: player.y, width: 12, height: 12 });
+          player.cooldown = 10;
+        }
+      }
+      if (player.cooldown) player.cooldown--;
+
+      // 弾移動
+      bullets.forEach(b => b.y -= 8);
+      bullets = bullets.filter(b => b.y > 0);
+
+      // 敵移動
+      enemies.forEach(e => e.y += 1.2);
+      enemies = enemies.filter(e => e.y < canvas.height);
+
+      // 当たり判定
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        for (let j = bullets.length - 1; j >= 0; j--) {
+          const e = enemies[i], b = bullets[j];
+          if (
+            b.x < e.x + e.width && b.x + b.width > e.x &&
+            b.y < e.y + e.height && b.y + b.height > e.y
+          ) {
+            score += e.score;
+            enemies.splice(i, 1);
+            bullets.splice(j, 1);
+            break;
+          }
+        }
+      }
+
+      // クリア判定
+      if (score >= 100) {
+        isGameOver = true;
+        canvas.style.display = 'none';
+        document.getElementById('clearScreen').style.display = 'block';
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
+
+      bullets.forEach(b => ctx.drawImage(bulletImg, b.x, b.y, b.width, b.height));
+      enemies.forEach(e => ctx.drawImage(e.img, e.x, e.y, e.width, e.height));
+
+      ctx.fillStyle = 'white';
+      ctx.font = '20px sans-serif';
+      ctx.fillText('Score: ' + score, 10, 30);
+    }
+
+    function loop() {
+      if (isGameOver) return;
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    function resetGame() {
+      score = 0;
+      bullets = [];
+      enemies = [];
+      player.x = canvas.width / 2 - player.width / 2;
+      isGameOver = false;
+      canvas.style.display = 'block';
+      document.getElementById('clearScreen').style.display = 'none';
+      loop();
+    }
+
+    // 敵出現間隔
+    setInterval(spawnEnemy, 1000);
+
+   // リトライボタン
+document.getElementById('retryButton').addEventListener('click', resetGame);
+
+// メインループ開始（先に呼ぶ）
+loop();
+  </script> 
+</body>
+</html>
